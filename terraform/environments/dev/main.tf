@@ -21,3 +21,14 @@ module "security_groups" {
   vpc_id      = module.vpc.vpc_id
   environment = "dev"
 }
+
+module "ecr" {
+  source           = "../../modules/ecr"
+  environment      = "dev"
+  repository_names = ["wallet-service", "compliance-service"]
+}
+
+module "iam" {
+  source      = "../../modules/iam"
+  environment = "dev"
+}
