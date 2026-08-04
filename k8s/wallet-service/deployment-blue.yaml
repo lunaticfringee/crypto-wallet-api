@@ -1,17 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: wallet-service
+  name: wallet-service-blue
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: wallet-service
+      track: stable
   template:
     metadata:
       labels:
         app: wallet-service
+        track: stable
     spec:
+      serviceAccountName: wallet-service-sa
       containers:
         - name: wallet-service
           image: wallet-service:v1

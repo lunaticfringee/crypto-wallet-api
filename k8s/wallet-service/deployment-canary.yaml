@@ -1,20 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: wallet-service
+  name: wallet-service-canary
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: wallet-service
+      track: canary
   template:
     metadata:
       labels:
         app: wallet-service
+        track: canary
     spec:
       containers:
         - name: wallet-service
-          image: wallet-service:v1
+          image: wallet-service:v2
           ports:
             - containerPort: 8000
           readinessProbe:

@@ -2,3 +2,9 @@
 **/venv/
 **/__pycache__/
 k8s/*/secret.yaml
+aws.txt
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfplan
+tfplan

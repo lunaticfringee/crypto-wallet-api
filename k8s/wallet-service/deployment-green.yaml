@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: wallet-service
+  name: wallet-service-green
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: wallet-service
+      app: wallet-service-green
   template:
     metadata:
       labels:
-        app: wallet-service
+        app: wallet-service-green
     spec:
       containers:
         - name: wallet-service
-          image: wallet-service:v1
+          image: wallet-service:v2
           ports:
             - containerPort: 8000
           readinessProbe:
