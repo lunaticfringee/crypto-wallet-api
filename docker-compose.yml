@@ -1,0 +1,68 @@
+volumes:
+  grafana-data:
+  prometheus-data:
+
+services:
+  wallet-service:
+    build:
+      context: ./wallet-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./wallet-service/.env
+    depends_on:
+      - ganache
+      - compliance-service
+
+  compliance-service:
+    build:
+      context: ./compliance-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./compliance-service/.env
+
+  prometheus:
+    image: prom/prometheus:v3.9.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+
+  grafana:
+    image: grafana/grafana:12.3.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+  ganache:
+    image: trufflesuite/ganache:v7.9.2
+    ports:
+      - "8545:8545"
+
+  bitcoin:
+    image: ruimarinho/bitcoin-core:latest
+    command: -regtest=1 -rpcuser=admin -rpcpassword=admin123 -rpcallowip=0.0.0.0/0 -rpcbind=0.0.0.0
+    ports:
+      - "19100:18443"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
+    ports:
+      - "8081:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    command:
+      - '--store_container_labels=true'
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    ports:
+      - "16686:16686"
+      - "4318:4318"

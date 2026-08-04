@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: compliance-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: compliance-service
+  template:
+    metadata:
+      labels:
+        app: compliance-service
+    spec:
+      containers:
+        - name: compliance-service
+          image: compliance-service:local
+          ports:
+            - containerPort: 8001
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          envFrom:
+            - secretRef:
+                name: compliance-service-secrets
