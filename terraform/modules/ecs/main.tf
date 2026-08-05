@@ -113,6 +113,14 @@ resource "aws_ecs_service" "wallet_service" {
     assign_public_ip = false
   }
 
+  depends_on = [var.alb_listener_arn]
+
+  load_balancer {
+    target_group_arn = var.wallet_service_target_group_arn
+    container_name   = "wallet-service"
+    container_port   = 8000
+  }
+
   tags = {
     Environment = var.environment
   }

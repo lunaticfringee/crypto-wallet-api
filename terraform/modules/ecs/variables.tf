@@ -27,3 +27,11 @@ variable "compliance_service_image" {
   description = "Full ECR image URI for compliance-service"
   type        = string
 }
+
+variable "wallet_service_target_group_arn" {
+  type = string
+}
+
+variable "alb_listener_arn" {
+  type = string
+}

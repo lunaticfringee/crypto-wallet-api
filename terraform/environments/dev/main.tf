@@ -34,12 +34,22 @@ module "iam" {
 }
 
 module "ecs" {
-  source                      = "../../modules/ecs"
-  environment                 = "dev"
-  vpc_id                      = module.vpc.vpc_id
-  private_subnet_id           = module.vpc.private_subnet_id
-  ecs_tasks_security_group_id = module.security_groups.ecs_tasks_security_group_id
-  task_execution_role_arn     = module.iam.task_execution_role_arn
-  wallet_service_image        = "${module.ecr.repository_urls["wallet-service"]}:v1"
-  compliance_service_image    = "${module.ecr.repository_urls["compliance-service"]}:v1"
+  source                          = "../../modules/ecs"
+  environment                     = "dev"
+  vpc_id                          = module.vpc.vpc_id
+  private_subnet_id               = module.vpc.private_subnet_id
+  ecs_tasks_security_group_id     = module.security_groups.ecs_tasks_security_group_id
+  task_execution_role_arn         = module.iam.task_execution_role_arn
+  wallet_service_image            = "${module.ecr.repository_urls["wallet-service"]}:v1"
+  compliance_service_image        = "${module.ecr.repository_urls["compliance-service"]}:v1"
+  wallet_service_target_group_arn = module.alb.target_group_arn
+  alb_listener_arn                = module.alb.http_listener_arn
+}
+
+module "alb" {
+  source                = "../../modules/alb"
+  environment           = "dev"
+  vpc_id                = module.vpc.vpc_id
+  public_subnet_ids     = [module.vpc.public_subnet_id, module.vpc.public_subnet_2_id]
+  alb_security_group_id = module.security_groups.alb_security_group_id
 }
