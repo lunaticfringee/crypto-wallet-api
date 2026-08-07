@@ -8,3 +8,7 @@ aws.txt
 *.tfstate.backup
 *.tfplan
 tfplan
+**/.env.*
+!**/.env.example
+*.pem
+*.key
