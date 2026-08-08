@@ -1,0 +1,47 @@
+name: Build and Deploy compliance-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'compliance-service/**'
+      - '.github/workflows/deploy-compliance-service.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-1
+  ECR_REPOSITORY: dev-compliance-service
+  ECS_CLUSTER: dev-cluster
+  ECS_SERVICE: dev-compliance-service
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::798404182966:role/github-actions-crypto-wallet-api
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./compliance-service
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      # NOTE: ECS update-service step temporarily removed.
+      # Re-add once ECS infrastructure (cluster/service) is rebuilt via Terraform.
