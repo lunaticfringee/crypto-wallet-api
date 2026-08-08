@@ -8,3 +8,9 @@ variable "environment" {
   description = "Environment name (dev, staging, production)"
   type        = string
 }
+
+variable "cost_center" {
+  description = "Cost center tag for billing"
+  type        = string
+  default     = "engineering-learning"
+}

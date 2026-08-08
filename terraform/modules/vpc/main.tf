@@ -6,6 +6,7 @@ resource "aws_vpc" "main" {
   tags = {
     Name        = "${var.environment}-vpc"
     Environment = var.environment
+    CostCenter  = var.cost_center
   }
 }
 

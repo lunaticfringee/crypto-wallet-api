@@ -124,3 +124,9 @@ resource "aws_iam_role_policy" "github_actions_permissions" {
 output "github_actions_role_arn" {
   value = aws_iam_role.github_actions.arn
 }
+
+
+resource "aws_iam_role_policy_attachment" "github_actions_readonly" {
+  role       = aws_iam_role.github_actions.name
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+}
