@@ -29,3 +29,15 @@ output "ecr_repository_urls" {
 output "task_execution_role_arn" {
   value = module.iam.task_execution_role_arn
 }
+
+output "eks_cluster_name" {
+  value = module.eks.cluster_name
+}
+
+output "eks_cluster_endpoint" {
+  value = module.eks.cluster_endpoint
+}
+
+output "eks_oidc_issuer_url" {
+  value = module.eks.cluster_oidc_issuer_url
+}

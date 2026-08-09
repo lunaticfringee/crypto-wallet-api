@@ -44,6 +44,17 @@ resource "aws_subnet" "private" {
   }
 }
 
+resource "aws_subnet" "private_2" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.4.0/24"
+  availability_zone = "ap-northeast-1c"
+
+  tags = {
+    Name        = "${var.environment}-private-subnet-2"
+    Environment = var.environment
+  }
+}
+
 resource "aws_security_group" "vpc_endpoints" {
   name        = "${var.environment}-vpc-endpoints-sg"
   description = "Security group for VPC interface endpoints"

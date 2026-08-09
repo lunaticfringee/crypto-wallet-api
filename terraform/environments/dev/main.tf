@@ -61,3 +61,10 @@ module "alb" {
   public_subnet_ids     = [module.vpc.public_subnet_id, module.vpc.public_subnet_2_id]
   alb_security_group_id = module.security_groups.alb_security_group_id
 }
+
+module "eks" {
+  source             = "../../modules/eks"
+  environment        = "dev"
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = [module.vpc.private_subnet_id, module.vpc.private_subnet_2_id]
+}
