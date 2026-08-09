@@ -137,3 +137,43 @@ AccessDenied: ... is not authorized to perform: s3:PutObject on resource:
 
 - **Cost discipline**: Fargate tasks, the ALB, and VPC Interface Endpoints all carry real hourly costs. IAM, small S3 objects, and empty/near-empty ECR repositories are effectively free. Standing practice: `terraform destroy` (or scale services to 0) at the end of any active work session; keep only the near-zero-cost bootstrap layer (state bucket, OIDC provider, IAM roles) running continuously, since CI/CD depends on it.
 - **ECR lifecycle policy**: untagged images expire after 7 days; only the 10 most recent tagged images are retained per repository — keeps repositories bounded without manual cleanup.
+
+---
+
+## 10. Compliance service outage — wallet-service balance check failure
+
+**Date:** August 2, 2026 · **Severity:** High (single endpoint fully unavailable)
+
+**Symptom:** `compliance-service` was stopped (simulated dependency outage) to test resilience. `wallet-service`'s `/wallet/{address}/balance` endpoint had no timeout or exception handling around its call to `compliance-service`, so every request during the outage returned a generic, uninformative `500 Internal Server Error`.
+
+**Detection — three independent signals, cross-verified:**
+1. **Grafana** — Error Rate panel spiked to ~60% for the affected endpoint
+2. **Structured logs** — full Python traceback pinpointed the exact failing line (`requests.get()` call to `compliance-service`)
+3. **Jaeger** — the failed span independently captured the same exception (`ConnectionError` / `NameResolutionError`) as a span attribute, `span.kind: client`, confirming the failure occurred at the network call and never reached compliance-service at all
+
+**Root cause:** when `compliance-service` was stopped, Docker Compose removed its DNS entry from the internal network. The unprotected `requests.get()` call raised an unhandled `NameResolutionError`, crashing the request with a generic `500` instead of a controlled failure.
+
+**Fix:** added an explicit timeout (`timeout=3`) and exception handling around the call. On failure, the endpoint now returns a clean `503 Service Unavailable` ("compliance check unavailable, cannot proceed") with a structured log entry.
+
+**Design decision — fail closed, not fail open:** unlike the CoinGecko price integration (which retries and eventually returns a generic unavailable message), the compliance check deliberately **fails closed** — if compliance-service is unreachable, the balance check is refused entirely rather than silently bypassed. In regulated financial infrastructure, silently skipping a compliance check during an outage is a more serious risk than temporary unavailability.
+
+**Verified** under both failure (consistent `503`s) and recovery (restarted, normal `200`, response time back to ~0.3s baseline).
+
+**Follow-ups identified:** apply the same timeout/exception pattern proactively to future outbound calls rather than reactively; wire up a real alert notification channel (only a placeholder contact point exists); consider a circuit breaker if call volume grows; evaluate redundancy for compliance-service itself.
+
+---
+
+## Operational runbook — High Error Rate alert
+
+**Alert:** fires when error rate > 10% for 1 minute · **Dashboard:** Crypto Wallet API - Overview → Error Rate (%) panel
+
+**First steps:**
+1. Check which endpoint is affected — the Error Rate panel breaks down by handler
+2. Check `wallet-service` logs: `docker logs crypto-wallet-api-wallet-service-1 --tail 50`
+3. Check Jaeger for the failing trace (`span.kind` and `otel.status_description` pinpoint the precise failure)
+
+**Known causes:**
+- **CoinGecko rate limit (429)** — `/price/{coin}` returns `503`. Self-resolves once the rate-limit window passes; see the retry/backoff pattern in `wallet-service/main.py` (`fetch_price_from_coingecko`).
+- **compliance-service unreachable** — `/wallet/{address}/balance` returns `503`. Check `docker compose ps compliance-service`; restart with `docker compose start compliance-service` if stopped. Full incident writeup: see #10 above.
+
+**Escalation:** no real on-call/paging configured for this project (placeholder contact point only). In production, this would route to an on-call rotation / Slack channel.
