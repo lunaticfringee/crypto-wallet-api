@@ -133,6 +133,24 @@ AccessDenied: ... is not authorized to perform: s3:PutObject on resource:
 
 ---
 
+## 11. EKS pod scheduling failure — max-pods-per-node limit, not CPU/memory
+
+**Symptom:** after installing ArgoCD via Helm, two of its pods (`argocd-application-controller`, `argocd-notifications-controller`) stayed `Pending` indefinitely, despite the node showing substantial free CPU (1930m) and memory (1466Mi).
+
+**Diagnosis:** `kubectl describe pod` on the pending pods showed:
+
+0/1 nodes are available: 1 Too many pods.
+
+`kubectl describe node` confirmed the node's allocatable pod count was capped at 11 — already reached by system pods (`kube-proxy`, `coredns`, `aws-node`) plus the running application and ArgoCD pods.
+
+**Root cause:** EKS's max-pods-per-node limit is derived from the VPC CNI's IP allocation — each pod requires a real VPC IP, and the ceiling is a function of the instance type's number of ENIs × IPs-per-ENI, not CPU or memory. `t3.small` (chosen for Free Tier eligibility) has a low ENI/IP allocation, producing a hard ceiling of 11 pods regardless of available compute.
+
+**Fix:** switched the node group's instance type to `m7i-flex.large` — still Free Tier eligible, but with more ENIs and IPs-per-ENI, raising the effective pod ceiling. Required a node group replacement (`instance_types` forces replacement in Terraform), which evicted and rescheduled all existing pods — genuinely fine for a dev cluster, but a real operational concern for production node type changes.
+
+**Lesson:** pod capacity planning on EKS is a distinct concern from compute sizing — ample CPU/memory headroom does not guarantee scheduling succeeds if the node has hit its IP-derived pod ceiling. Worth checking `kubectl describe node`'s allocatable `pods:` value specifically when diagnosing "Pending with no resource pressure" symptoms.
+
+---
+
 ## Operational notes
 
 - **Cost discipline**: Fargate tasks, the ALB, and VPC Interface Endpoints all carry real hourly costs. IAM, small S3 objects, and empty/near-empty ECR repositories are effectively free. Standing practice: `terraform destroy` (or scale services to 0) at the end of any active work session; keep only the near-zero-cost bootstrap layer (state bucket, OIDC provider, IAM roles) running continuously, since CI/CD depends on it.
