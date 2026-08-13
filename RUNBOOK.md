@@ -195,3 +195,19 @@ AccessDenied: ... is not authorized to perform: s3:PutObject on resource:
 - **compliance-service unreachable** — `/wallet/{address}/balance` returns `503`. Check `docker compose ps compliance-service`; restart with `docker compose start compliance-service` if stopped. Full incident writeup: see #10 above.
 
 **Escalation:** no real on-call/paging configured for this project (placeholder contact point only). In production, this would route to an on-call rotation / Slack channel.
+
+---
+
+## 12. CI race condition — concurrent pipelines rejected on git push
+
+**Symptom:** when both `wallet-service` and `compliance-service` CI pipelines ran concurrently (both committing an image-tag bump back to `main`), the second pipeline's `git push` failed:
+
+! [rejected] main -> main (fetch first)
+
+**Root cause:** both pipelines checked out the same starting commit, each made its own local commit, and the pipeline that pushed second was rejected as a non-fast-forward — the first push had already advanced `main` in the remote, and Git correctly refused to silently overwrite it.
+
+**Fix:** added `git pull --rebase origin main` immediately before `git push` in both workflows — replaying the local commit on top of whatever the other pipeline had already pushed, rather than failing outright.
+
+**Verified:** re-triggered both pipelines simultaneously; both committed and pushed successfully in sequence with no manual intervention.
+
+**Lesson:** any CI pattern where multiple pipelines commit back to the same branch (a real, common shape for GitOps image-tag automation) needs to account for concurrent-push conflicts explicitly — this isn't hypothetical, it reproduced on the very first concurrent test.
