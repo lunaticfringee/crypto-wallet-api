@@ -1,0 +1,12 @@
+# Overrides for the istiod chart (the control plane itself)
+pilot:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  autoscaleEnabled: false   # single-node dev cluster — no need for HPA on the control plane itself
+meshConfig:
+  accessLogFile: /dev/stdout   # genuinely standard for dev/learning — real production often ships logs elsewhere instead

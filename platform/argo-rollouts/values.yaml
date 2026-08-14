@@ -1,0 +1,12 @@
+# Overrides for the argo-rollouts chart
+controller:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+dashboard:
+  enabled: true   # Argo Rollouts' own web UI for visualizing canary progress — genuinely useful for demos/interviews
