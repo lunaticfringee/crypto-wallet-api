@@ -1,0 +1,13 @@
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ include "wallet-service.fullname" . }}
+spec:
+  host: {{ include "wallet-service.fullname" . }}
+  subsets:
+    - name: stable
+      labels:
+        {{- include "wallet-service.selectorLabels" . | nindent 8 }}
+    - name: canary
+      labels:
+        {{- include "wallet-service.selectorLabels" . | nindent 8 }}

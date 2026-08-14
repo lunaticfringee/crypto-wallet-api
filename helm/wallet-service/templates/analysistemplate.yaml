@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: wallet-service-success-rate
+spec:
+  args:
+    - name: service-name
+  metrics:
+    - name: success-rate
+      interval: {{ .Values.canary.analysis.interval }}
+      successCondition: result[0] >= {{ .Values.canary.analysis.successThreshold }}
+      failureLimit: {{ .Values.canary.analysis.failureLimit }}
+      provider:
+        prometheus:
+          address: http://prometheus-server.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(istio_requests_total{destination_service_name="{{ "{{" }}args.service-name{{ "}}" }}", response_code!~"5.."}[1m]))
+            /
+            sum(rate(istio_requests_total{destination_service_name="{{ "{{" }}args.service-name{{ "}}" }}"}[1m]))
