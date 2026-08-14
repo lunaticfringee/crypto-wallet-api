@@ -1,16 +1,39 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: {{ include "wallet-service.fullname" . }}
   labels:
     {{- include "wallet-service.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
   selector:
     matchLabels:
       {{- include "wallet-service.selectorLabels" . | nindent 6 }}
+  strategy:
+    canary:
+      canaryService: {{ include "wallet-service.fullname" . }}-canary
+      stableService: {{ include "wallet-service.fullname" . }}-stable
+      trafficRouting:
+        istio:
+          virtualService:
+            name: {{ include "wallet-service.fullname" . }}
+            routes:
+              - primary
+          destinationRule:
+            name: {{ include "wallet-service.fullname" . }}
+            canarySubsetName: canary
+            stableSubsetName: stable
+      steps:
+        {{- range .Values.canary.steps }}
+        - {{ toYaml . | nindent 10 | trim }}
+        {{- end }}
+      analysis:
+        templates:
+          - templateName: wallet-service-success-rate
+        startingStep: 1
+        args:
+          - name: service-name
+            value: {{ include "wallet-service.fullname" . }}-canary
   template:
     metadata:
       {{- with .Values.podAnnotations }}
