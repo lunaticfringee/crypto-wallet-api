@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: 798404182966.dkr.ecr.ap-northeast-1.amazonaws.com/dev-compliance-service
   pullPolicy: IfNotPresent
-  tag: "378e5cb7b3dc51ab82a2634adb3c3a7db32eb1f2"
+  tag: "4c7d1368a32653b0608ec40fdf47d733849d17da"
 
 imagePullSecrets: []
 nameOverride: ""
