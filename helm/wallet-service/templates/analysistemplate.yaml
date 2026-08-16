@@ -12,7 +12,7 @@ spec:
       failureLimit: {{ .Values.canary.analysis.failureLimit }}
       provider:
         prometheus:
-          address: http://prometheus-server.monitoring.svc.cluster.local:9090
+          address: http://observability-kube-prometh-prometheus.monitoring.svc.cluster.local:9090
           query: |
             sum(rate(istio_requests_total{destination_service_name="{{ "{{" }}args.service-name{{ "}}" }}", response_code!~"5.."}[1m]))
             /
