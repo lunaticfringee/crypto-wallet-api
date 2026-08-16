@@ -14,6 +14,6 @@ spec:
         prometheus:
           address: http://observability-kube-prometh-prometheus.monitoring.svc.cluster.local:9090
           query: |
-            sum(rate(istio_requests_total{destination_service_name="{{ "{{" }}args.service-name{{ "}}" }}", response_code!~"5.."}[1m]))
+            sum(rate(istio_requests_total{destination_service_name="{{ "{{" }}args.service-name{{ "}}" }}", response_code!~"5.."}[1m])) or vector(0)
             /
-            sum(rate(istio_requests_total{destination_service_name="{{ "{{" }}args.service-name{{ "}}" }}"}[1m]))
+            sum(rate(istio_requests_total{destination_service_name="{{ "{{" }}args.service-name{{ "}}" }}"}[1m])) > 0
