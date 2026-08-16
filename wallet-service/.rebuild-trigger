@@ -1,3 +1,4 @@
 # rebuild trigger 1786583577
 # trigger real canary test 1786851582
 # retry canary with fixed prometheus dns 1786852499
+# rebuild after fresh ECR 1786871782
