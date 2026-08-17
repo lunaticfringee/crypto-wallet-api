@@ -7,14 +7,21 @@ spec:
     - name: service-name
   metrics:
     - name: success-rate
+      initialDelay: {{ .Values.canary.analysis.initialDelay }}
       interval: {{ .Values.canary.analysis.interval }}
+      count: {{ .Values.canary.analysis.count }}
       successCondition: result[0] >= {{ .Values.canary.analysis.successThreshold }}
       failureLimit: {{ .Values.canary.analysis.failureLimit }}
-      count: {{ .Values.canary.analysis.count }}
       provider:
         prometheus:
           address: http://observability-kube-prometh-prometheus.monitoring.svc.cluster.local:9090
           query: |
-            sum(rate(istio_requests_total{destination_service_name="{{ "{{" }}args.service-name{{ "}}" }}", response_code!~"5.."}[1m])) or vector(0)
+            (
+              sum(rate(istio_requests_total{destination_service_name="{{ "{{" }}args.service-name{{ "}}" }}", response_code!~"5.."}[1m]))
+              or vector(0)
+            )
             /
-            sum(rate(istio_requests_total{destination_service_name="{{ "{{" }}args.service-name{{ "}}" }}"}[1m])) > 0
+            (
+              sum(rate(istio_requests_total{destination_service_name="{{ "{{" }}args.service-name{{ "}}" }}"}[1m]))
+              or vector(1)
+            )
