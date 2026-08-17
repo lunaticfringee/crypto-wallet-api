@@ -211,3 +211,55 @@ AccessDenied: ... is not authorized to perform: s3:PutObject on resource:
 **Verified:** re-triggered both pipelines simultaneously; both committed and pushed successfully in sequence with no manual intervention.
 
 **Lesson:** any CI pattern where multiple pipelines commit back to the same branch (a real, common shape for GitOps image-tag automation) needs to account for concurrent-push conflicts explicitly — this isn't hypothetical, it reproduced on the very first concurrent test.
+
+---
+
+## 13. kube-prometheus-stack CRD annotation size limit
+
+**Symptom:** ArgoCD sync of `kube-prometheus-stack` consistently failed on several CRDs:
+
+CustomResourceDefinition ... is invalid: metadata.annotations: Too long: may not be more than 262144 bytes
+
+**Root cause:** ArgoCD's default apply method stores the full last-applied-configuration in a `kubectl.kubernetes.io/last-applied-configuration` annotation for diffing. The `Prometheus`, `Alertmanager`, and `PrometheusAgent` CRDs' OpenAPI schemas are large enough to exceed Kubernetes' 256KB annotation size limit — a known, documented issue with this specific chart.
+
+**Fix:** enabled `Replace=true` as a sync option on the Application (Server-Side Apply alone did not fully resolve it in this case) — this uses `kubectl replace` instead of `kubectl apply`, which never touches the annotation at all.
+
+**Lesson:** large-CRD charts (common in observability tooling) can hit hard Kubernetes limits under ArgoCD's default apply strategy — `Replace=true` is the standard workaround.
+
+---
+
+## 14. Stale admission webhook certificate after repeated syncs
+
+**Symptom:** after several manual re-sync attempts while debugging incident #13, the Prometheus Operator logged continuous `tls: bad certificate` handshake errors, and the actual `Prometheus` StatefulSet never got created — despite the `Prometheus` custom resource itself showing no errors.
+
+**Root cause:** each sync re-ran a Job that regenerates the admission webhook's TLS certificate. Repeated syncs in a short window left the Prometheus Operator holding a stale, cached CA bundle that no longer matched the current certificate.
+
+**Fix:** `kubectl rollout restart deployment observability-kube-prometh-operator` — forced the operator to reload current webhook state.
+
+**Lesson:** iterative debugging via repeated syncs can itself introduce state inconsistency in components with certificate-based admission webhooks — worth checking Kubernetes Events directly (not just controller logs) when symptoms don't match the apparent cause.
+
+---
+
+## 15. PromQL operator precedence bug in canary analysis query
+
+**Symptom:** an Argo Rollouts `AnalysisTemplate` querying Prometheus for canary success rate consistently either errored (`reflect: slice index out of range`, on empty results) or returned `NaN`, across many rollout attempts — even after generating genuine, sustained live traffic through the mesh.
+
+**Root cause:** the query used a zero-guard pattern:
+
+sum(rate(numerator)) or vector(0)
+/
+sum(rate(denominator)) > 0
+
+PromQL's `or` operator has **lower precedence than `/` and comparison operators**. The query did not group the way it visually appeared — it actually parsed as `numerator or ((vector(0) / denominator) > 0)`, meaning the ratio was never correctly computed whenever the numerator had any data at all.
+
+**Fix:** added explicit parentheses to force the intended grouping, and used distinct defaults for numerator (`0`) and denominator (`1`, not `0`, to avoid a NaN from division by zero). Also added Argo Rollouts' native `initialDelay: 45s` field to account for real Prometheus scrape-and-propagate latency, rather than relying on the query alone to be resilient to timing.
+
+**Verified:** triggered a real canary rollout against continuous live traffic; `AnalysisRun` measurements returned `phase: Successful, value: [1]`; the rollout automatically progressed through all 8 steps (10% → 25% → 50% → 75% → 100%) and promoted to stable with zero manual intervention beyond the initial sync trigger.
+
+**Lesson:** PromQL operator precedence is a well-known, real source of subtle bugs — `or`/`and`/`unless` bind lower than arithmetic and comparison operators, which is counter-intuitive. Any ratio-based query using boolean-style zero-guards needs explicit parentheses to behave as intended. This bug produced symptoms (timing-looking failures, empty results) that repeatedly pointed toward infrastructure or timing issues rather than the actual query logic — worth verifying query correctness directly (e.g., via `curl` against Prometheus's own API) before assuming an infrastructure cause.
+
+---
+
+## Full automated canary loop — verified end to end
+
+With incidents #13–15 resolved, a complete, real progressive delivery loop was verified live: a code push triggered CI to build, push, and commit a new image tag; ArgoCD detected the drift; Argo Rollouts created a new revision and progressively shifted Istio `VirtualService` traffic weights; at each step, live Prometheus queries (scraping `istio_requests_total` from Istio sidecars via a dedicated `PodMonitor`) gated automatic promotion; the rollout completed all steps and promoted to stable without further manual intervention after the initial sync.
