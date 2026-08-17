@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: 798404182966.dkr.ecr.ap-northeast-1.amazonaws.com/dev-wallet-service
   pullPolicy: IfNotPresent
-  tag: "f1b9d3e91e643410897d3cc7d1c7e05938e452dd"
+  tag: "c4c0c716de9b0f23d04a0105bd3607982cf13565"
 
 imagePullSecrets: []
 nameOverride: ""
