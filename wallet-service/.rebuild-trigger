@@ -10,3 +10,4 @@
 # canary with continuous background traffic 1786928597
 # final attempt with fixed failureLimit 1786930379
 # final clean run with precedence fix 1786947978
+# real test with query precedence fix 1786948373
