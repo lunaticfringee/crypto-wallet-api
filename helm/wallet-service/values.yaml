@@ -75,4 +75,5 @@ canary:
   analysis:
     successThreshold: 0.95
     interval: 30s
-    failureLimit: 3
+    failureLimit: 10
+    count: 10

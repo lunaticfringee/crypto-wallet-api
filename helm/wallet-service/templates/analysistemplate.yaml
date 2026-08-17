@@ -10,6 +10,7 @@ spec:
       interval: {{ .Values.canary.analysis.interval }}
       successCondition: result[0] >= {{ .Values.canary.analysis.successThreshold }}
       failureLimit: {{ .Values.canary.analysis.failureLimit }}
+      count: {{ .Values.canary.analysis.count }}
       provider:
         prometheus:
           address: http://observability-kube-prometh-prometheus.monitoring.svc.cluster.local:9090
