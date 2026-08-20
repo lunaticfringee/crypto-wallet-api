@@ -77,3 +77,9 @@ module "eks" {
     module.vpc.public_subnet_2_id
   ]
 }
+
+module "secrets" {
+  source      = "../../modules/secrets"
+  environment = "dev"
+  secret_name = "wallet-service/infura-url"
+}

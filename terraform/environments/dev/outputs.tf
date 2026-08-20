@@ -41,3 +41,7 @@ output "eks_cluster_endpoint" {
 output "eks_oidc_issuer_url" {
   value = module.eks.cluster_oidc_issuer_url
 }
+
+output "wallet_secret_arn" {
+  value = module.secrets.secret_arn
+}
