@@ -83,3 +83,11 @@ module "secrets" {
   environment = "dev"
   secret_name = "wallet-service/infura-url"
 }
+
+module "irsa_external_secrets" {
+  source            = "../../modules/irsa-external-secrets"
+  environment       = "dev"
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_issuer_url   = replace(module.eks.cluster_oidc_issuer_url, "https://", "")
+  secret_arns       = [module.secrets.secret_arn]
+}
